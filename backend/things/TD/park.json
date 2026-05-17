@@ -1,0 +1,43 @@
+{
+  "@context": [
+    "https://www.w3.org/2019/wot/td/v1",
+    {
+      "platform": "https://iotlab.sjtu.edu.cn/ontology/platform#"
+    }
+  ],
+  "id": "urn:platform:thing:park",
+  "title": "观山湖公园",
+  "@type": ["公园", "监控录像", "休闲娱乐"],
+  "description": "观山湖公园位于贵阳市区西北，是一座面积较大的城市公园。公园内拥有迷人的湖光山色和品种丰富的植物，还建有专门的塑胶跑步道，是贵阳近郊的一处环境优美的休闲健身之处，同时也是春季赏花踏青的好去处。观山湖公园位于观山大桥南北两侧，北侧以观山水库为中心、南侧以金华湖为中心，四周植满了各种植物，包括樱花、桃树、梨树、垂柳、白玉兰、桂花、银杏、水杉等等应有尽有，在不同的季节都能看到不一样的自然景观。而这里的生态湿地也吸引了许多白鹭、野鸭等鸟禽在此栖息。",
+  "platform:address": "贵州省/贵阳市/高新区/观山湖公园",
+  "platform:geo": {
+    "platform:longitude": 106.630700,
+    "platform:latitude": 26.642900
+  },
+  "security": [
+    "nosec_sc"
+  ],
+  "securityDefinitions": {
+    "nosec_sc": {
+      "scheme": "nosec"
+    }
+  },
+  "properties": {
+    "southGateCamera": {
+      "title": "南门监控视频画面",
+      "description": "推送南门监控摄像头的实时视频画面",
+      "uiType": "VideoCard",
+      "observable": true,
+      "readOnly": true,
+      "forms": [
+        {
+          "href": "ws://localhost:3000/api/v1/proxy/things/urn:platform:thing:park/events/videoStream",
+          "contentType": "video/mp4",
+          "op": [
+            "observeproperty"
+          ]
+        }
+      ]
+    }
+  }
+}

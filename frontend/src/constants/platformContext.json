@@ -1,0 +1,21 @@
+{
+  "@context": {
+    "platform": "https://iotlab.sjtu.edu.cn/ontology/platform#",
+    "address": {
+      "@id": "platform:address",
+      "@type": "http://www.w3.org/2001/XMLSchema#string"
+    },
+    "geo": {
+      "@id": "platform:geo",
+      "@type": "@id"
+    },
+    "longitude": {
+      "@id": "platform:longitude",
+      "@type": "http://www.w3.org/2001/XMLSchema#double"
+    },
+    "latitude": {
+      "@id": "platform:latitude",
+      "@type": "http://www.w3.org/2001/XMLSchema#double"
+    }
+  }
+}

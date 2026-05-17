@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://www.w3.org/2019/wot/td/v1",
+    {
+      "platform": "https://iotlab.sjtu.edu.cn/ontology/platform#"
+    }
+  ],
+  "id": "urn:platform:thing:parking-lot",
+  "title": "联培基地停车场",
+  "@type": ["停车场", "停车位", "交通出行"],
+  "description": "联培基地的停车场",
+  "platform:address": "贵州省/贵阳市/高新区/联培基地停车场",
+  "platform:geo": {
+    "platform:longitude": 106.400000,
+    "platform:latitude": 26.400000
+  },
+  "security": [
+    "nosec_sc"
+  ],
+  "securityDefinitions": {
+    "nosec_sc": {
+      "scheme": "nosec"
+    }
+  },
+  "properties": {
+    "remainingSpaces": {
+      "title": "剩余车位数",
+      "description": "实时的剩余车位数，通过出入口闸机门监测，停车场总车位数约为 100",
+      "type": "integer",
+      "uiType": "NumberCardHTTP",
+      "observable": false,
+      "readOnly": true,
+      "forms": [
+        {
+          "href": "http://localhost:3000/api/v1/proxy/things/urn:platform:thing:parking-lot/properties/remainingSpaces",
+          "contentType": "application/json",
+          "op": [
+            "readproperty"
+          ]
+        }
+      ]
+    }
+  }
+}

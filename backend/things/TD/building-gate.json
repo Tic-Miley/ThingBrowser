@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://www.w3.org/2019/wot/td/v1",
+    {
+      "platform": "https://iotlab.sjtu.edu.cn/ontology/platform#"
+    }
+  ],
+  "id": "urn:platform:thing:building-gate",
+  "title": "联培基地大楼",
+  "@type": ["实验楼", "工作", "教育"],
+  "description": "联培基地的主实验楼",
+  "platform:address": "贵州省/贵阳市/高新区/联培基地大楼",
+  "platform:geo": {
+    "platform:longitude": 106.400000,
+    "platform:latitude": 26.430000
+  },
+  "security": [
+    "nosec_sc"
+  ],
+  "securityDefinitions": {
+    "nosec_sc": {
+      "scheme": "nosec"
+    }
+  },
+  "properties": {
+    "peopleCount": {
+      "title": "楼内人数",
+      "description": "实时的楼内人数，通过出入口闸机门监测，推送更新数据",
+      "type": "integer",
+      "uiType": "NumberCardWS",
+      "observable": true,
+      "readOnly": true,
+      "forms": [
+        {
+          "href": "ws://localhost:3000/api/v1/proxy/things/urn:platform:thing:building-gate/events/peopleCount",
+          "contentType": "application/json",
+          "op": [
+            "observeproperty"
+          ]
+        }
+      ]
+    }
+  }
+}

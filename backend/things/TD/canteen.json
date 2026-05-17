@@ -1,0 +1,61 @@
+{
+  "@context": [
+    "https://www.w3.org/2019/wot/td/v1",
+    {
+      "platform": "https://iotlab.sjtu.edu.cn/ontology/platform#"
+    }
+  ],
+  "id": "urn:platform:thing:canteen",
+  "title": "联培基地食堂",
+  "@type": ["食堂", "餐饮"],
+  "description": "联培基地的食堂",
+  "platform:address": "贵州省/贵阳市/高新区/联培基地食堂",
+  "platform:geo": {
+    "platform:longitude": 106.430000,
+    "platform:latitude": 26.400000
+  },
+  "security": [
+    "nosec_sc"
+  ],
+  "securityDefinitions": {
+    "nosec_sc": {
+      "scheme": "nosec"
+    }
+  },
+  "properties": {
+    "peopleCount": {
+      "title": "食堂人数",
+      "description": "实时的食堂人数，通过出入口摄像头估算，食堂可容纳人数约 200 人",
+      "type": "integer",
+      "uiType": "NumberCardHTTP",
+      "observable": false,
+      "readOnly": true,
+      "forms": [
+        {
+          "href": "http://localhost:3000/api/v1/proxy/things/urn:platform:thing:canteen/properties/peopleCount",
+          "contentType": "application/json",
+          "op": [
+            "readproperty"
+          ]
+        }
+      ]
+    },
+    "todayMenu": {
+      "title": "今日菜谱",
+      "description": "今日食堂各餐台的菜品信息，包含菜品名称、价格、口味等，每日 7:00 更新",
+      "type": "string",
+      "uiType": "HtmlDocumentCard",
+      "observable": false,
+      "readOnly": true,
+      "forms": [
+        {
+          "href": "http://localhost:3000/api/v1/proxy/things/urn:platform:thing:canteen/properties/todayMenu",
+          "contentType": "text/html",
+          "op": [
+            "readproperty"
+          ]
+        }
+      ]
+    }
+  }
+}
