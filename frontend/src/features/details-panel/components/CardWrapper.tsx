@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { CardConfig } from "@/constants/DataCardTemplates";
 import apiClient from "@/services/http/httpClient";
@@ -83,10 +83,35 @@ function VideoCardWrapper({
   CardComponent: any;
   cardProps: Record<string, any>;
 }) {
-  const { title, url } = cardProps;
+  const { title, videoUrl } = cardProps;
   const [open, setOpen] = useState(false);
-  const { data, status } = useThingSubscription<string>(url, {
-    enabled: open && !!url,
+
+  // HTTP/HTTPS 直连模式 (FLV 流等)
+  const isHttpUrl = videoUrl && (videoUrl.startsWith("http://") || videoUrl.startsWith("https://"));
+
+  useEffect(() => {
+    console.log("[VideoCardWrapper] props:", {
+      title,
+      videoUrl,
+      isHttpUrl,
+      open,
+    });
+  }, [title, videoUrl, isHttpUrl, open]);
+  
+  if (isHttpUrl) {
+    return (
+      <CardComponent
+        title={title}
+        videoUrl={videoUrl}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    );
+  }
+
+  // WebSocket 推流模式 (JPEG base64 帧)
+  const { data, status } = useThingSubscription<string>(videoUrl, {
+    enabled: open && !!videoUrl,
     parse: (payload) => {
       if (!payload) return null;
       if (typeof payload === "string") {
@@ -113,9 +138,9 @@ function VideoCardWrapper({
   return (
     <CardComponent
       title={title}
+      frameSrc={frameSrc}
       open={open}
       onOpenChange={setOpen}
-      frameSrc={frameSrc}
       isLoading={status !== "connected"}
     />
   );

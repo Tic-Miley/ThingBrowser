@@ -6,10 +6,10 @@
     }
   ],
   "id": "urn:platform:thing:canteen",
-  "title": "联培基地食堂",
+  "title": "政务服务中心食堂",
   "@type": ["食堂", "餐饮"],
-  "description": "联培基地的食堂",
-  "platform:address": "贵州省/贵阳市/高新区/联培基地食堂",
+  "description": "政务服务中心的食堂，为政务服务中心的工作人员和来访人员提供餐饮服务。物模型包含食堂人数监控、今日菜谱和食堂实时画面等属性。",
+  "platform:address": "贵州省/贵阳市/高新区/政务服务中心食堂",
   "platform:geo": {
     "platform:longitude": 106.430000,
     "platform:latitude": 26.400000
@@ -32,7 +32,7 @@
       "readOnly": true,
       "forms": [
         {
-          "href": "http://localhost:3000/api/v1/proxy/things/urn:platform:thing:canteen/properties/peopleCount",
+          "href": "http://bdff25ca.natappfree.cc/食堂/今日进入人数",
           "contentType": "application/json",
           "op": [
             "readproperty"
@@ -49,8 +49,25 @@
       "readOnly": true,
       "forms": [
         {
-          "href": "http://localhost:3000/api/v1/proxy/things/urn:platform:thing:canteen/properties/todayMenu",
+          "href": "http://f575af26.natappfree.cc/api/v1/proxy/things/urn:platform:thing:canteen/properties/todayMenu",
           "contentType": "text/html",
+          "op": [
+            "readproperty"
+          ]
+        }
+      ]
+    },
+    "canteenVideo": {
+      "title": "食堂实时画面",
+      "description": "萤石云C2C摄像头实时画面，HTTP-FLV 流",
+      "type": "string",
+      "uiType": "VideoCard",
+      "observable": false,
+      "readOnly": true,
+      "forms": [
+        {
+          "href": "https://rtmp04open.ys7.com:9188/v3/openlive/D80089996_1_1.flv?expire=1781269164&id=983112833859551232&t=4d82c515059073c24bc48e951167d82217f12de6218b9448f5514929e7345417&ev=101&supportH265=1",
+          "contentType": "video/x-flv",
           "op": [
             "readproperty"
           ]

@@ -6,12 +6,12 @@
 // - 动态视图引擎将调度使用合适的数据卡片样式
 // - 物的详情面板上各类数据卡片规整排列
 
-import { useState, type ComponentType } from "react";
-import { Activity, Video, FileText, Wrench, AlertTriangle } from "lucide-react";
+import { useState, useCallback, useEffect, type ComponentType } from "react";
+import { Activity, Video, FileText, Wrench, AlertTriangle, Loader2 } from "lucide-react";
+import flvjs from "flv.js";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { buildFullUrl } from "@/services/http/httpClient";
 import type { ActionAffordance, EventAffordance, PropertyAffordance, ThingDescription } from "@/types/td";
 
 export interface RegistryRenderContext {
@@ -31,7 +31,7 @@ export interface CardConfig<P extends object = object> {
   resolveProps: (context: RegistryRenderContext) => P;
 }
 
-function NumberCard({ title, value, loading = false, error }: { title: string; value: number | string | null; loading?: boolean; error?: string | null }) {
+export function NumberCard({ title, value, loading = false, error }: { title: string; value: number | string | null; loading?: boolean; error?: string | null }) {
   return (
     <Card className="flex flex-col bg-primary/2 border-primary/20 relative overflow-hidden h-36 col-span-1">
       <CardHeader className="pt-0 pb-0 z-10 flex flex-row items-center justify-between">
@@ -57,7 +57,7 @@ function NumberCard({ title, value, loading = false, error }: { title: string; v
 }
 
 
-function SwitchCard({ title, isChecked, onToggle }: { title: string; isChecked: boolean; onToggle?: (checked: boolean) => void }) {
+export function SwitchCard({ title, isChecked, onToggle }: { title: string; isChecked: boolean; onToggle?: (checked: boolean) => void }) {
   return (
     <Card>
       <CardHeader className="p-4 pb-2">
@@ -74,19 +74,114 @@ function SwitchCard({ title, isChecked, onToggle }: { title: string; isChecked: 
   );
 }
 
-function VideoCard({
+export function VideoCard({
   title,
+  videoUrl,
   frameSrc,
   open,
   onOpenChange,
   isLoading,
 }: {
   title: string;
-  frameSrc: string | null;
+  videoUrl?: string | null;
+  frameSrc?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  isLoading: boolean;
+  isLoading?: boolean;
 }) {
+  const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
+  const [playerState, setPlayerState] = useState<"idle" | "loading" | "playing" | "error">("idle");
+  const isFlvMode = !!(videoUrl && (videoUrl.startsWith("http://") || videoUrl.startsWith("https://")));
+
+  // callback ref：在 Portal 中 video 元素挂载后触发
+  const videoCallbackRef = useCallback((el: HTMLVideoElement | null) => {
+    setVideoEl(el);
+  }, []);
+
+  // 独立的 flv.js 播放器 effect，依赖 videoEl 确保 DOM 已就绪
+  useEffect(() => {
+    if (!isFlvMode || !open || !videoUrl || !videoEl) {
+      console.log("[VideoCard] skip init:", { isFlvMode, open, hasVideoUrl: !!videoUrl, hasVideoEl: !!videoEl });
+      if (!videoEl) setPlayerState("idle");
+      return;
+    }
+
+    console.log("[VideoCard] 开始连接 FLV 流:", videoUrl);
+
+    let player: flvjs.Player | null = null;
+
+    try {
+      if (!flvjs.isSupported()) {
+        console.error("[VideoCard] 当前浏览器不支持 flv.js (MSE 不可用)");
+        setPlayerState("error");
+        return;
+      }
+
+      player = flvjs.createPlayer({
+        type: "flv",
+        url: videoUrl,
+        isLive: true,
+        cors: true,
+        withCredentials: false,
+      } as flvjs.MediaDataSource);
+      player.attachMediaElement(videoEl);
+      player.load();
+      setPlayerState("loading");
+      console.log("[VideoCard] flv.js player 已创建，正在加载...");
+
+      player.on(flvjs.Events.MEDIA_INFO, (info: any) => {
+        console.log("[VideoCard] 媒体信息:", info);
+        setPlayerState("playing");
+      });
+
+      player.on(flvjs.Events.ERROR, (_type: string, detail: any) => {
+        console.error("[VideoCard] FLV 播放错误 - 类型:", _type);
+        console.error("[VideoCard] FLV 播放错误 - 详情:", detail);
+        if (detail && typeof detail === "object") {
+          console.error("[VideoCard] 错误信息:", detail.msg || detail.message || JSON.stringify(detail));
+        }
+        setPlayerState("error");
+      });
+
+      player.on(flvjs.Events.LOADING_COMPLETE, () => {
+        console.log("[VideoCard] FLV 流加载完成");
+      });
+
+      player.on(flvjs.Events.STATISTICS_INFO, (stats: any) => {
+        console.log("[VideoCard] 流统计 - 速度:", stats?.speed, "KB/s, 已解码帧:", stats?.decodedFrames);
+      });
+
+      const playResult = player.play();
+      if (playResult && typeof (playResult as Promise<void>).then === "function") {
+        (playResult as Promise<void>)
+          .then(() => {
+            console.log("[VideoCard] play() 调用成功");
+          })
+          .catch((err: any) => {
+            console.error("[VideoCard] play() 失败:", err);
+          });
+      } else {
+        console.log("[VideoCard] play() 已调用，返回值为 void");
+      }
+    } catch (e) {
+      console.error("[VideoCard] 初始化异常:", e);
+      setPlayerState("error");
+    }
+
+    return () => {
+      if (player) {
+        try {
+          player.pause();
+          player.unload();
+          player.detachMediaElement();
+          player.destroy();
+        } catch (_e) {
+          // ignore cleanup errors
+        }
+      }
+    };
+  }, [open, videoUrl, isFlvMode, videoEl]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
@@ -99,27 +194,65 @@ function VideoCard({
         <DialogTitle className="sr-only">{title} Live Stream</DialogTitle>
         <DialogDescription className="sr-only">Live video stream for {title}</DialogDescription>
         <div className="relative aspect-video w-full bg-zinc-950 flex items-center justify-center">
-          {frameSrc ? (
-            <img src={frameSrc} alt="Live Stream" className="w-full h-full object-contain" />
-          ) : (
-            isLoading && (
-              <div className="flex flex-col items-center gap-4 animate-pulse text-zinc-500">
-                <Video className="w-12 h-12" />
-                <span>载入视频流中...</span>
+          {/* FLV 模式：使用 flv.js + video 元素 */}
+          {isFlvMode && (
+            <>
+              <video
+                ref={videoCallbackRef}
+                className="w-full h-full object-contain"
+                muted
+                playsInline
+                autoPlay
+                controls
+                onPlaying={() => {
+                  console.log("[VideoCard] <video> onPlaying 触发，画面开始渲染");
+                  setPlayerState("playing");
+                }}
+              />
+              <div className="absolute top-4 right-4 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-1.5 text-[11px] text-white backdrop-blur">
+                <span className="font-mono tracking-wider">FLV</span>
+                <span className="text-white/60">{playerState}</span>
               </div>
-            )
+              {playerState === "loading" && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-zinc-950/60 text-zinc-400">
+                  <Loader2 className="w-12 h-12 animate-spin" />
+                  <span>载入视频流中...</span>
+                </div>
+              )}
+              {playerState === "error" && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-zinc-950/60 text-red-400">
+                  <Video className="w-12 h-12" />
+                  <span>视频流加载失败，请检查网络连接</span>
+                </div>
+              )}
+            </>
           )}
-          <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur px-3 py-1.5 rounded-full border border-white/10">
-            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
-            <span className="text-white text-xs font-mono font-medium tracking-wider">LIVE</span>
-          </div>
+
+          {/* JPEG 帧模式（WebSocket 推流） */}
+          {!isFlvMode && frameSrc && (
+            <img src={frameSrc} alt="Live Stream" className="w-full h-full object-contain" />
+          )}
+          {!isFlvMode && !frameSrc && isLoading && (
+            <div className="flex flex-col items-center gap-4 animate-pulse text-zinc-500">
+              <Video className="w-12 h-12" />
+              <span>载入视频流中...</span>
+            </div>
+          )}
+
+          {/* LIVE 标识 */}
+          {(playerState === "playing" || (!isFlvMode && frameSrc)) && (
+            <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur px-3 py-1.5 rounded-full border border-white/10">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
+              <span className="text-white text-xs font-mono font-medium tracking-wider">LIVE</span>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-function HtmlDocumentCard({ title, url }: { title: string; url: string }) {
+export function HtmlDocumentCard({ title, url }: { title: string; url: string }) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -139,7 +272,7 @@ function HtmlDocumentCard({ title, url }: { title: string; url: string }) {
   );
 }
 
-function ActionButtonCard({ title, onClick }: { title: string; onClick: () => void }) {
+export function ActionButtonCard({ title, onClick }: { title: string; onClick: () => void }) {
   return (
     <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={onClick}>
       <CardHeader className="p-4">
@@ -152,7 +285,7 @@ function ActionButtonCard({ title, onClick }: { title: string; onClick: () => vo
   );
 }
 
-function UnsupportedCard({ title, reason }: { title: string; reason: string }) {
+export function UnsupportedCard({ title, reason }: { title: string; reason: string }) {
   return (
     <Card>
       <CardHeader className="p-4 pb-2">
@@ -164,139 +297,4 @@ function UnsupportedCard({ title, reason }: { title: string; reason: string }) {
       <CardContent className="p-4 pt-0 text-xs text-muted-foreground">{reason}</CardContent>
     </Card>
   );
-}
-
-export const COMPONENT_REGISTRY: Record<string, CardConfig<any>> = {
-  NumberCard: {
-    uiType: "NumberCard",
-    dataSourceType: "http",
-    description: "数值遥测卡片，用于显示静态或一次性数值",
-    propsSchema: {
-      title: "string - 卡片标题",
-      value: "number | string | null - 显示的数值",
-      loading: "boolean - 加载状态指示器",
-    },
-    component: NumberCard,
-    resolveProps: ({ key, property }) => ({
-      title: property?.title || key,
-      value: (property as any)?.value ?? null,
-      loading: false,
-    }),
-  },
-  NumberCardWS: {
-    uiType: "NumberCardWS",
-    dataSourceType: "ws",
-    description: "WebSocket 数值卡片，用于通过 WS 长连接接收实时数据",
-    propsSchema: {
-      title: "string - 卡片标题",
-      href: "string - WebSocket 连接地址",
-      dataKey: "string - 数据键标识",
-    },
-    component: NumberCard,
-    resolveProps: ({ key, property, thing }) => ({
-      title: property?.title || key,
-      href: buildFullUrl(property?.forms?.[0]?.href || "", "ws"),
-      dataKey: `${thing.id}:${key}`,
-    }),
-  },
-  NumberCardHTTP: {
-    uiType: "NumberCardHTTP",
-    dataSourceType: "http",
-    description: "HTTP 数值卡片，支持定时轮询更新数据",
-    propsSchema: {
-      title: "string - 卡片标题",
-      href: "string - HTTP 请求地址",
-      isObservable: "boolean - 是否启用自动轮询",
-      dataKey: "string - 数据键标识",
-    },
-    component: NumberCard,
-    resolveProps: ({ key, property, thing }) => ({
-      title: property?.title || key,
-      href: buildFullUrl(property?.forms?.[0]?.href || "", "http"),
-      isObservable: !!property?.observable,
-      dataKey: `${thing.id}:${key}`,
-    }),
-  },
-  SwitchCard: {
-    uiType: "SwitchCard",
-    dataSourceType: "static",
-    description: "布尔状态卡片，用于显示/控制开关状态",
-    propsSchema: {
-      title: "string - 卡片标题",
-      isChecked: "boolean - 开关状态",
-      onToggle: "function - 开关切换回调",
-    },
-    component: SwitchCard,
-    resolveProps: ({ key, property }) => ({
-      title: property?.title || key,
-      isChecked: !!(property as any)?.value,
-      onToggle: undefined,
-    }),
-  },
-  VideoCard: {
-    uiType: "VideoCard",
-    dataSourceType: "ws",
-    description: "视频流卡片，用于显示实时监控视频或直播流",
-    propsSchema: {
-      title: "string - 卡片标题",
-      url: "string - WebSocket 或 RTSP 流地址",
-    },
-    component: VideoCard,
-    resolveProps: ({ key, property }) => ({
-      title: property?.title || key,
-      url: buildFullUrl(property?.forms?.[0]?.href || "", "ws"),
-    }),
-  },
-  HtmlDocumentCard: {
-    uiType: "HtmlDocumentCard",
-    dataSourceType: "http",
-    description: "文档卡片，用于嵌入和显示 HTML 或 PDF 文档",
-    propsSchema: {
-      title: "string - 卡片标题",
-      url: "string - 文档 URL",
-    },
-    component: HtmlDocumentCard,
-    resolveProps: ({ key, property }) => ({
-      title: property?.title || key,
-      url: buildFullUrl(property?.forms?.[0]?.href || "", "http"),
-    }),
-  },
-  ActionButtonCard: {
-    uiType: "ActionButtonCard",
-    dataSourceType: "static",
-    description: "操作卡片，用于触发 Thing 的 Action 命令",
-    propsSchema: {
-      title: "string - 按钮标题",
-      onClick: "function - 点击回调",
-    },
-    component: ActionButtonCard,
-    // TODO: 未来需实现真实的 Action 调用：通过 action.forms 中的 href 发送 HTTP 请求
-    resolveProps: ({ key, action }) => ({
-      title: action?.title || key,
-      onClick: () => {},
-    }),
-  },
-  UnsupportedCard: {
-    uiType: "UnsupportedCard",
-    dataSourceType: "static",
-    description: "兜底卡片，用于缺少 uiType 或未知 uiType 的场景",
-    propsSchema: {
-      title: "string - 卡片标题",
-      reason: "string - 失败原因",
-    },
-    component: UnsupportedCard,
-    resolveProps: ({ key, property, action, event }) => ({
-      title: property?.title || action?.title || event?.title || key,
-      reason: property ? "❌ 缺少 uiType 配置" : "❌ 未知卡片类型",
-    }),
-  },
-};
-
-export function getCardConfig(uiType: string | undefined): CardConfig<any> | null {
-  if (!uiType) return null;
-  return COMPONENT_REGISTRY[uiType] || null;
-}
-
-export function getAvailableCardTypes(): string[] {
-  return Object.keys(COMPONENT_REGISTRY);
 }

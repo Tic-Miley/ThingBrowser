@@ -11,7 +11,7 @@ import type {
   ActionAffordance,
   EventAffordance,
 } from "@/types/td";
-import { COMPONENT_REGISTRY, getCardConfig } from "@/constants/DataCardTemplates";
+import { COMPONENT_REGISTRY, getCardConfig } from "@/constants/DataCardTemplates.registry";
 import type { RegistryRenderContext } from "@/constants/DataCardTemplates";
 import { buildThingTdLowCodeHtmlDataUrl } from "@/constants/TDMapper";
 import { CardWrapper } from "@/features/details-panel/components/CardWrapper";
