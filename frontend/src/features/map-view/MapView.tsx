@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { useGlobalStore } from "@/store/useGlobalStore";
 import { fetchThingsInBbox, fetchThingTd } from "@/services/http/thingService";
 import { createLogger } from "@/services/logger";
+import { HoverCard } from "./HoverCard";
+import { useHoverCard } from "./useHoverCard";
 
 const log = createLogger("BaiduMap");
 
@@ -66,6 +68,30 @@ export function MapView() {
   // 用 ref 桥接 stale closure：事件监听器绑定于首次渲染，需通过 ref 读取最新值
   const activeThingUrnRef = useRef(activeThingUrn);
   activeThingUrnRef.current = activeThingUrn;
+
+  // ==========================================
+  // Hover Card 集成
+  // ==========================================
+  const {
+    hoverState,
+    hoverPosition,
+    handleMarkerEnter,
+    handleMarkerLeave,
+    handleCardEnter,
+    handleCardLeave,
+  } = useHoverCard({
+    mapInstance,
+    mapContainer,
+    activeThingUrn,
+  });
+
+  // 使用 ref 存储 hover 事件处理器引用，供标记的闭包回调使用
+  // 避免在标记创建时因闭包 stale 而丢失最新的处理器
+  const hoverHandlersRef = useRef({
+    handleMarkerEnter,
+    handleMarkerLeave,
+  });
+  hoverHandlersRef.current = { handleMarkerEnter, handleMarkerLeave };
 
   const fetchAndRenderMarkers = () => {
     if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
@@ -154,6 +180,18 @@ export function MapView() {
           // 注册点击事件（仅设置 URN，由 useEffect 统一处理高亮与飞行）
           marker.addEventListener('click', () => {
             setActiveThingUrn(markerData.urn);
+          });
+
+          // 注册 hover 事件（Baidu Map GL 支持 mouseover / mouseout）
+          marker.addEventListener('mouseover', () => {
+            hoverHandlersRef.current.handleMarkerEnter(
+              markerData.urn,
+              markerData.title,
+              { lng: markerData.location[0], lat: markerData.location[1] },
+            );
+          });
+          marker.addEventListener('mouseout', () => {
+            hoverHandlersRef.current.handleMarkerLeave();
           });
 
           mapInstance.current.addOverlay(marker);
@@ -340,6 +378,23 @@ export function MapView() {
           </div>
         </div>
       )}
+
+      {/* Hover Card — 绝对定位于外层 relative 容器内，坐标来自 pointToPixel */}
+      {hoverState &&
+        hoverPosition &&
+        hoverState.phase !== "idle" &&
+        hoverState.phase !== "debouncing" && (
+          <HoverCard
+            phase={hoverState.phase}
+            markerTitle={hoverState.markerTitle}
+            address={hoverState.td?.["platform:address"]}
+            properties={hoverState.properties}
+            screenPosition={hoverPosition}
+            onMouseEnter={handleCardEnter}
+            onMouseLeave={handleCardLeave}
+          />
+        )}
+
       {/* BBox 内无物为正常现象，不阻塞地图交互 */}
     </div>
   );
