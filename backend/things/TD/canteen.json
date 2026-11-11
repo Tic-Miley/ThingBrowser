@@ -32,7 +32,7 @@
       "readOnly": true,
       "forms": [
         {
-          "href": "http://bdff25ca.natappfree.cc/食堂/今日进入人数",
+          "href": "http://localhost:3000/api/v1/proxy/things/urn:platform:thing:canteen/properties/peopleCount",
           "contentType": "application/json",
           "op": [
             "readproperty"
@@ -49,7 +49,7 @@
       "readOnly": true,
       "forms": [
         {
-          "href": "http://f575af26.natappfree.cc/api/v1/proxy/things/urn:platform:thing:canteen/properties/todayMenu",
+          "href": "http://localhost:3000/api/v1/proxy/things/urn:platform:thing:canteen/properties/todayMenu",
           "contentType": "text/html",
           "op": [
             "readproperty"
@@ -66,7 +66,7 @@
       "readOnly": true,
       "forms": [
         {
-          "href": "https://rtmp04open.ys7.com:9188/v3/openlive/D80089996_1_1.flv?expire=1781269164&id=983112833859551232&t=4d82c515059073c24bc48e951167d82217f12de6218b9448f5514929e7345417&ev=101&supportH265=1",
+          "href": "https://rtmp01open.ys7.com:9188/openlive/d42478e055aa42e09bdee71088df7fb9.hd.flv",
           "contentType": "video/x-flv",
           "op": [
             "readproperty"
